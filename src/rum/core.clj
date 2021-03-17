@@ -3,7 +3,7 @@
   (:require
    [rum.cursor :as cursor]
    [rum.server-render :as render]
-   [rum.util :refer [collect collect* call-all-2 call-all-3 call-all-4 into-all]]
+   [rum.util :refer [collect collect* call-fns into-all]]
    [rum.derived-atom :as derived-atom]
    [daiquiri.compiler :as compiler]
    [clojure.string :as s]
@@ -149,14 +149,14 @@
     (fn [& args]
       (let [props   nil
             state   (-> {:rum/args args}
-                        (call-all-3 init props)
-                        (call-all-2 will-mount))
+                        (call-fns init props)
+                        (call-fns will-mount))
             [dom _] (if (empty? did-catch)
                       (wrapped-render state)
                       (try
                         (wrapped-render state)
                         (catch Exception e
-                          (wrapped-render (call-all-4 state did-catch e nil)))))]
+                          (wrapped-render (call-fns state did-catch e nil)))))]
         (or dom [:rum/nothing])))))
 
 (defn ^:no-doc build-defc [render-body mixins display-name]

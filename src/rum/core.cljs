@@ -11,7 +11,7 @@
    [rum.specs]
    [daiquiri.core]
    [rum.cursor :as cursor]
-   [rum.util :as util :refer [collect collect* call-all-2 call-all-3 call-all-4]]
+   [rum.util :as util :refer [collect collect* call-fns]]
    [rum.derived-atom :as derived-atom]))
 
 (goog-define ^boolean USE_EFFECT? false)
@@ -53,7 +53,7 @@
                                             #js {":rum/state"
                                                  (-> (aget props ":rum/initial-state")
                                                      (assoc :rum/react-component this)
-                                                     (call-all-3 init props)
+                                                     (call-fns init props)
                                                      volatile!)})
                                   (.call js/React.Component this props)))
         _              (goog/inherits ctor js/React.Component)
@@ -63,13 +63,13 @@
       (aset prototype "componentWillMount"
                 (fn []
                   (this-as this
-                           (vswap! (state this) call-all-2 will-mount)))))
+                           (vswap! (state this) call-fns will-mount)))))
 
     (when-not (empty? did-mount)
       (aset prototype "componentDidMount"
                 (fn []
                   (this-as this
-                           (vswap! (state this) call-all-2 did-mount)))))
+                           (vswap! (state this) call-fns did-mount)))))
 
     (aset prototype "componentWillReceiveProps"
               (fn [next-props]
@@ -94,7 +94,7 @@
                 (fn [_ next-state]
                   (this-as this
                            (let [new-state (aget next-state ":rum/state")]
-                             (vswap! new-state call-all-2 will-update))))))
+                             (vswap! new-state call-fns will-update))))))
 
     (aset prototype "render"
               (fn []
@@ -108,20 +108,20 @@
       (aset prototype "componentDidUpdate"
                 (fn [_ _]
                   (this-as this
-                           (vswap! (state this) call-all-2 did-update)))))
+                           (vswap! (state this) call-fns did-update)))))
 
     (when-not (empty? did-catch)
       (aset prototype "componentDidCatch"
                 (fn [error info]
                   (this-as this
-                           (vswap! (state this) call-all-4 did-catch error {:rum/component-stack (aget info "componentStack")})
+                           (vswap! (state this) call-fns did-catch error {:rum/component-stack (aget info "componentStack")})
                            (.forceUpdate this)))))
 
     (aset prototype "componentWillUnmount"
               (fn []
                 (this-as this
                          (when-not (empty? will-unmount)
-                           (vswap! (state this) call-all-2 will-unmount))
+                           (vswap! (state this) call-fns will-unmount))
                          (aset this ":rum/unmounted?" true))))
 
     (when-not (empty? child-context)
@@ -329,7 +329,7 @@
       (let [local-state (atom initial)]
         (add-watch local-state key
                    (fn [_ _ p n]
-                     (let [component ^js (some-> (aget (:rum/react-component state) "state" ":rum/state") cljs.core/deref :rum/react-component)]
+                     (let [component ^js (some-> (aget (:rum/react-component state) "state") (aget ":rum/state") cljs.core/deref :rum/react-component)]
                        (when (and component (not= p n))
                          (.forceUpdate component)))))
         (assoc state key local-state)))}))

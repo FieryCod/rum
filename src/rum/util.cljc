@@ -2,48 +2,36 @@
 
 (defn collect
   [key mixins]
-  (let [result (transient [])]
-    (doseq [m mixins]
-      (when-let [elm (get m key)]
-        (conj! result elm)))
-    (persistent! result)))
+  (persistent!
+   (reduce
+    (fn [acc m]
+      (if-let [v (.get m key)]
+        (conj! acc v)
+        acc))
+    (transient [])
+    mixins)))
 
-(defn akeep
-  [afn coll]
-  (let [result (transient [])]
-    (doseq [elm coll]
-      (when-let [nelm (afn elm)]
-        (conj! result nelm)))
-    (persistent! result)))
+(defn collect*
+  [keys mixins]
+  (persistent!
+   (reduce
+    (fn [acc m]
+      (reduce
+       (fn [acc k]
+         (if-let [v (.get m k)]
+           (conj! acc v)
+           acc))
+       acc
+       keys))
+    (transient [])
+    mixins)))
 
-(defn collect* [keys mixins]
-  (into []
-        (mapcat (fn [m]
-                  (akeep
-                   (fn [k] (get m k))
-                   keys)))
-        mixins))
-
-(defn call-all-2
-  [state fns]
-  (reduce
-   (fn [state afn] (afn state))
-   state
-   fns))
-
-(defn call-all-3
-  [state fns arg1]
-  (reduce
-   (fn [state afn] (afn state arg1))
-   state
-   fns))
-
-(defn call-all-4
-  [state fns arg1 arg2]
-  (reduce
-   (fn [state afn] (afn state arg1 arg2))
-   state
-   fns))
+(defn call-fns
+  ([state fns             ] (reduce (fn [acc f] (f acc                 )) state fns))
+  ([state fns x           ] (reduce (fn [acc f] (f acc x               )) state fns))
+  ([state fns x y         ] (reduce (fn [acc f] (f acc x y             )) state fns))
+  ([state fns x y z       ] (reduce (fn [acc f] (f acc x y z           )) state fns))
+  ([state fns x y z & args] (reduce (fn [acc f] (apply f acc x y z args)) state fns)))
 
 (defn into-all
   "Like `into` but supports multiple \"from\"s.
